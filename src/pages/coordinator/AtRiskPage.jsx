@@ -1,3 +1,7 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useOutletContext } from 'react-router-dom';
+import { studentService } from '../../services/studentService';
+import { alertService } from '../../services/alertService';
 import RiskBadge from '../../components/common/RiskBadge';
 import { useToast } from '../../context/ToastContext';
 import { 
