@@ -109,6 +109,7 @@ export const storage = {
     }
   },
 
+  notifyStateChange,
   KEYS
 };
 
