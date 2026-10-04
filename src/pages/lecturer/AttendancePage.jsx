@@ -4,6 +4,7 @@ import { authService } from '../../services/authService';
 import { courseService } from '../../services/courseService';
 import { attendanceService } from '../../services/attendanceService';
 import { studentService } from '../../services/studentService';
+import { calculateAttendanceMetrics } from '../../services/riskEngine';
 import RiskBadge from '../../components/common/RiskBadge';
 import { useToast } from '../../context/ToastContext';
 import ConfirmModal from '../../components/ui/ConfirmModal';
@@ -56,14 +57,18 @@ export default function AttendancePage() {
       ? allCourses.filter(c => c.lecturerId === user.id || (user.assignedCourses && user.assignedCourses.includes(c.code)))
       : allCourses;
 
-    setCourses(myCourses);
-    const initialCode = selectedCourseCode || (myCourses[0]?.code ?? '');
+    const availableCourses = (myCourses && myCourses.length > 0) ? myCourses : allCourses;
+    setCourses(availableCourses);
+    const initialCode = (selectedCourseCode && availableCourses.some(c => c.code === selectedCourseCode))
+      ? selectedCourseCode 
+      : (availableCourses[0]?.code ?? '');
     if (initialCode) {
       setSelectedCourseCode(initialCode);
     }
   };
 
   const loadCourseData = (courseCode) => {
+    if (!courseCode) return;
     const sessionList = attendanceService.getSessionsByCourse(courseCode);
     setSessions(sessionList);
 
@@ -141,9 +146,7 @@ export default function AttendancePage() {
     // Count how many students are now below 60%
     let lowCount = 0;
     students.forEach(st => {
-      const metric = attendanceService.calculateAttendanceMetrics 
-        ? attendanceService.calculateAttendanceMetrics(updatedSessions, st.id, selectedCourseCode)
-        : { percentage: 80 };
+      const metric = calculateAttendanceMetrics(updatedSessions, st.id, selectedCourseCode);
       if (metric?.percentage < 60) lowCount++;
     });
 
@@ -409,10 +412,17 @@ export default function AttendancePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredStudents.map((st, idx) => {
-                      const currentStatus = attendanceMap[st.id] || 'absent';
-                      const overallMetric = calculateAttendanceMetrics(sessions, st.id, selectedCourseCode);
-                      const isAtRisk = overallMetric.percentage < 60;
+                    {filteredStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-slate-400">
+                          No enrolled students found for {selectedCourseCode || 'this course'}.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredStudents.map((st, idx) => {
+                        const currentStatus = attendanceMap[st.id] || 'absent';
+                        const overallMetric = calculateAttendanceMetrics(sessions, st.id, selectedCourseCode);
+                        const isAtRisk = overallMetric.percentage < 60;
 
                       return (
                         <tr key={st.id} className="hover:bg-slate-50 transition">
@@ -488,7 +498,7 @@ export default function AttendancePage() {
                           </td>
                         </tr>
                       );
-                    })}
+                    }))}
                   </tbody>
                 </table>
               </div>

@@ -18,6 +18,10 @@ export const attendanceService = {
     return sessions.find(s => s.id === id) || null;
   },
 
+  calculateAttendanceMetrics(allSessions, studentId, courseCode) {
+    return calculateAttendanceMetrics(allSessions, studentId, courseCode);
+  },
+
   /**
    * Save or create an attendance session.
    * Immediately evaluates affected students and triggers risk alerts if attendance drops below 60%.

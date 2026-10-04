@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import { courseService } from '../../services/courseService';
 import { scoreService } from '../../services/scoreService';
+import { studentService } from '../../services/studentService';
 import RiskBadge from '../../components/common/RiskBadge';
 import { useToast } from '../../context/ToastContext';
 import { 
@@ -42,14 +43,18 @@ export default function CaScoresPage() {
       ? allCourses.filter(c => c.lecturerId === user.id || (user.assignedCourses && user.assignedCourses.includes(c.code)))
       : allCourses;
 
-    setCourses(myCourses);
-    const initialCode = selectedCourseCode || (myCourses[0]?.code ?? '');
+    const availableCourses = (myCourses && myCourses.length > 0) ? myCourses : allCourses;
+    setCourses(availableCourses);
+    const initialCode = (selectedCourseCode && availableCourses.some(c => c.code === selectedCourseCode))
+      ? selectedCourseCode 
+      : (availableCourses[0]?.code ?? '');
     if (initialCode) {
       setSelectedCourseCode(initialCode);
     }
   };
 
   const loadScoresForCourse = (courseCode) => {
+    if (!courseCode) return;
     const allStudents = studentService.getAll();
     const enrolled = allStudents.filter(s => s.enrolledCourses && s.enrolledCourses.includes(courseCode));
     const currentScores = scoreService.getScoresByCourse(courseCode);
@@ -250,8 +255,15 @@ export default function CaScoresPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredRows.map((row, idx) => {
-                  const isLow = row.percentage < 40;
+                {filteredRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-slate-400">
+                      No student records found for {selectedCourseCode || 'this course'}.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRows.map((row, idx) => {
+                    const isLow = row.percentage < 40;
                   return (
                     <tr key={row.student.id} className="hover:bg-slate-50 transition">
                       <td className="py-3 px-4 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
@@ -331,7 +343,7 @@ export default function CaScoresPage() {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>
